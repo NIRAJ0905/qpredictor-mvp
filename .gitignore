@@ -1,0 +1,36 @@
+# ── Python ──────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+*.pyc
+
+# ── Database ─────────────────────────────────────────────
+backend/qpredictor.db
+*.db
+*.sqlite3
+
+# ── Uploaded files (local dev only) ──────────────────────
+backend/storage/papers/*
+!backend/storage/papers/.gitkeep
+
+# ── Environment secrets ───────────────────────────────────
+.env
+.env.local
+.env.production
+!.env.example
+
+# ── Node / Frontend ───────────────────────────────────────
+node_modules/
+dist/
+.vite/
+frontend/.next/
+
+# ── Editor / OS ───────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

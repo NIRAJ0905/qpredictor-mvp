@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Q-Predictor — Upload Papers</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #f5f5f5; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 2rem 1rem; }
+  .card { background: #fff; border-radius: 12px; border: 1px solid #e5e5e5; padding: 2rem; width: 100%; max-width: 600px; }
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  .sub { font-size: 14px; color: #666; margin-bottom: 1.5rem; }
+  label { font-size: 13px; font-weight: 500; color: #444; display: block; margin-bottom: 6px; }
+  input[type=text], input[type=email], input[type=password], input[type=number] {
+    width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px;
+    font-size: 14px; margin-bottom: 1rem; outline: none;
+  }
+  input:focus { border-color: #888; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .drop-zone {
+    border: 2px dashed #ccc; border-radius: 10px; padding: 2rem; text-align: center;
+    cursor: pointer; margin-bottom: 1rem; transition: border-color 0.2s, background 0.2s;
+  }
+  .drop-zone:hover, .drop-zone.drag-over { border-color: #555; background: #fafafa; }
+  .drop-zone p { font-size: 14px; color: #666; margin-bottom: 4px; }
+  .drop-zone small { font-size: 12px; color: #aaa; }
+  #file-list { margin-bottom: 1rem; }
+  .file-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px; background: #f9f9f9; border-radius: 8px;
+    margin-bottom: 6px; font-size: 13px;
+  }
+  .file-item span { color: #333; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-item .size { color: #888; font-size: 12px; margin: 0 10px; flex-shrink: 0; }
+  .file-item .rm { background: none; border: none; color: #aaa; cursor: pointer; font-size: 16px; padding: 0 4px; }
+  .file-item .rm:hover { color: #e00; }
+  .btn { width: 100%; padding: 10px; border: none; border-radius: 8px; font-size: 15px; font-weight: 500; cursor: pointer; }
+  .btn-primary { background: #222; color: #fff; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-secondary { background: #f0f0f0; color: #333; margin-bottom: 0.75rem; }
+  .log { margin-top: 1.25rem; }
+  .log-item { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 8px; line-height: 1.5; }
+  .log-info    { background: #e8f4fd; color: #0c3952; }
+  .log-success { background: #d1e7dd; color: #0a3622; }
+  .log-error   { background: #f8d7da; color: #58151c; }
+  .log-warn    { background: #fff3cd; color: #664d03; }
+  .divider { border: none; border-top: 1px solid #eee; margin: 1.25rem 0; }
+  .section-title { font-size: 12px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.75rem; }
+  .token-row { display: flex; gap: 8px; }
+  .token-row input { margin-bottom: 0; flex: 1; font-family: monospace; font-size: 12px; }
+  .token-row button { padding: 8px 14px; border: 1px solid #ddd; border-radius: 8px; background: #fff; font-size: 13px; cursor: pointer; }
+  #progress-bar-wrap { display:none; background:#eee; border-radius:8px; height:8px; margin-bottom:1rem; overflow:hidden; }
+  #progress-bar { height:100%; background:#222; width:0%; transition:width 0.3s; }
+  .badge { display:inline-block; font-size:11px; padding:2px 8px; border-radius:20px; font-weight:500; margin-left:6px; }
+  .badge-ok { background:#d1e7dd; color:#0a3622; }
+  .badge-warn { background:#fff3cd; color:#856404; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>📄 Q-Predictor — Paper Upload</h1>
+  <p class="sub">Make sure <code>uvicorn app.main:app --reload</code> is running first</p>
+
+  <div class="section-title">1. Login</div>
+  <label>Email</label>
+  <input type="email" id="email" placeholder="you@example.com" />
+  <label>Password</label>
+  <input type="password" id="password" placeholder="your password" />
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0.5rem">
+    <button class="btn btn-secondary" onclick="doLogin()">Login</button>
+    <button class="btn btn-secondary" onclick="doSignup()">Signup</button>
+  </div>
+  <div id="auth-status" style="margin-bottom:1rem"></div>
+
+  <div style="margin-bottom:1rem">
+    <label>Token (auto-filled after login)</label>
+    <div class="token-row">
+      <input type="text" id="token-input" placeholder="eyJhbGci..." oninput="refreshBtn()" />
+      <button onclick="document.getElementById('token-input').value='';refreshBtn()">Clear</button>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <div class="section-title">2. Subject</div>
+  <div style="display:flex;gap:8px;margin-bottom:0.75rem;align-items:flex-end">
+    <div style="flex:1">
+      <label>Subject ID <span id="subj-name" style="font-weight:400;color:#666"></span></label>
+      <input type="number" id="subject-id" placeholder="Enter ID or create below" oninput="refreshBtn()" style="margin-bottom:0" />
+    </div>
+    <button class="btn btn-secondary" style="width:auto;padding:8px 14px;margin-bottom:0" onclick="loadSubjects()">Load mine</button>
+  </div>
+  <div id="subject-list" style="margin-bottom:0.75rem"></div>
+
+  <details style="margin-bottom:1rem">
+    <summary style="font-size:13px;color:#555;cursor:pointer;padding:6px 0">+ Create new subject</summary>
+    <div style="margin-top:0.75rem">
+      <label>Name *</label>
+      <input type="text" id="s-name" placeholder="Applied Physics" />
+      <div class="row">
+        <div><label>Code</label><input type="text" id="s-code" placeholder="PHY101" /></div>
+        <div><label>Semester</label><input type="text" id="s-sem" placeholder="Sem 2" /></div>
+      </div>
+      <div class="row">
+        <div><label>Department</label><input type="text" id="s-dept" placeholder="Engineering" /></div>
+        <div><label>University</label><input type="text" id="s-univ" placeholder="Mumbai University" /></div>
+      </div>
+      <button class="btn btn-secondary" onclick="createSubject()">Create subject</button>
+    </div>
+  </details>
+
+  <hr class="divider">
+
+  <div class="section-title">3. Upload PDFs</div>
+  <div class="row" style="margin-bottom:1rem">
+    <div><label>Year (optional)</label><input type="number" id="year" placeholder="2023" /></div>
+    <div><label>Semester (optional)</label><input type="text" id="semester" placeholder="Sem 2" /></div>
+  </div>
+
+  <div class="drop-zone" id="drop-zone"
+       onclick="document.getElementById('file-input').click()"
+       ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+    <p>📂 Click to select PDFs or drag &amp; drop here</p>
+    <small id="drop-hint">PDF files only · max 30 MB each · min 10 papers recommended</small>
+  </div>
+  <input type="file" id="file-input" multiple accept=".pdf" style="display:none" onchange="addFiles(this.files)">
+
+  <div id="file-list"></div>
+  <div id="progress-bar-wrap"><div id="progress-bar"></div></div>
+  <button class="btn btn-primary" id="upload-btn" onclick="uploadAll()" disabled>Upload papers</button>
+  <div class="log" id="log"></div>
+</div>
+
+<script>
+const BASE = 'http://127.0.0.1:8000';
+let files = [];
+
+function tok() { return (document.getElementById('token-input').value || '').trim(); }
+function authH() { return { 'Authorization': 'Bearer ' + tok() }; }
+
+function log(msg, type='info') {
+  const d = document.createElement('div');
+  d.className = 'log-item log-' + type;
+  d.innerHTML = msg;
+  document.getElementById('log').prepend(d);
+}
+
+function setAuth(msg, ok) {
+  const el = document.getElementById('auth-status');
+  el.innerHTML = `<div class="log-item ${ok?'log-success':'log-error'}" style="margin:0">${msg}</div>`;
+}
+
+function refreshBtn() {
+  const n   = files.length;
+  const btn = document.getElementById('upload-btn');
+  const sid = document.getElementById('subject-id').value;
+  btn.disabled = !tok() || !sid || n === 0;
+  btn.textContent = n > 0 ? `Upload ${n} paper${n>1?'s':''}` : 'Upload papers';
+  const hint = document.getElementById('drop-hint');
+  hint.textContent = n > 0
+    ? `${n} file${n>1?'s':''} selected — click or drop to add more`
+    : 'PDF files only · max 30 MB each · min 10 papers recommended';
+}
+
+function fmtSize(b) {
+  if (b < 1024*1024) return (b/1024).toFixed(0) + ' KB';
+  return (b/1024/1024).toFixed(1) + ' MB';
+}
+
+function addFiles(fl) {
+  for (const f of fl) {
+    if (!f.name.toLowerCase().endsWith('.pdf')) { log(`Skipped "${f.name}" — not a PDF`, 'warn'); continue; }
+    if (f.size > 30*1024*1024) { log(`Skipped "${f.name}" — over 30 MB`, 'warn'); continue; }
+    if (files.some(x => x.name===f.name && x.size===f.size)) continue;
+    files.push(f);
+  }
+  renderFiles(); refreshBtn();
+}
+
+function removeFile(i) { files.splice(i,1); renderFiles(); refreshBtn(); }
+
+function renderFiles() {
+  const el = document.getElementById('file-list');
+  el.innerHTML = files.map((f,i) => `
+    <div class="file-item">
+      <span title="${f.name}">📄 ${f.name}</span>
+      <span class="size">${fmtSize(f.size)}</span>
+      <button class="rm" onclick="removeFile(${i})">✕</button>
+    </div>`).join('');
+}
+
+function onDragOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); }
+function onDragLeave(e) { document.getElementById('drop-zone').classList.remove('drag-over'); }
+function onDrop(e) { e.preventDefault(); document.getElementById('drop-zone').classList.remove('drag-over'); addFiles(e.dataTransfer.files); }
+
+async function api(path, opts={}) {
+  const r = await fetch(BASE + path, opts);
+  const txt = await r.text();
+  let data;
+  try { data = JSON.parse(txt); } catch { data = txt; }
+  return { ok: r.ok, status: r.status, data };
+}
+
+async function doSignup() {
+  const email = document.getElementById('email').value.trim();
+  const pass  = document.getElementById('password').value;
+  if (!email || !pass) { setAuth('Enter email and password.', false); return; }
+  try {
+    const { ok, data } = await api('/api/auth/signup', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ name: email.split('@')[0], email, password: pass })
+    });
+    if (ok) { setAuth(`Account created for <b>${data.email}</b>. Now click Login.`, true); }
+    else { setAuth(data.detail || JSON.stringify(data), false); }
+  } catch(e) { setAuth('Cannot reach server. Is <code>uvicorn</code> running on port 8000?', false); }
+}
+
+async function doLogin() {
+  const email = document.getElementById('email').value.trim();
+  const pass  = document.getElementById('password').value;
+  if (!email || !pass) { setAuth('Enter email and password.', false); return; }
+  try {
+    const body = new URLSearchParams({ username: email, password: pass });
+    const { ok, data } = await api('/api/auth/login', { method:'POST', body });
+    if (ok) {
+      document.getElementById('token-input').value = data.access_token;
+      setAuth(`Logged in as <b>${email}</b> ✓`, true);
+      refreshBtn();
+      loadSubjects();
+    } else { setAuth(data.detail || 'Login failed.', false); }
+  } catch(e) { setAuth('Cannot reach server. Is <code>uvicorn</code> running on port 8000?', false); }
+}
+
+async function loadSubjects() {
+  if (!tok()) return;
+  try {
+    const { ok, data } = await api('/api/subjects', { headers: authH() });
+    if (!ok || !data.length) { document.getElementById('subject-list').innerHTML=''; return; }
+    document.getElementById('subject-list').innerHTML = data.map(s => `
+      <div class="file-item" style="cursor:pointer" onclick="pickSubject(${s.id},'${s.name.replace(/'/g,"\\''")}')">
+        <span><b style="font-weight:500">${s.name}</b>${s.code?' · '+s.code:''}</span>
+        <span class="size">${s.paper_count} papers · ${s.question_count} questions</span>
+      </div>`).join('');
+  } catch(e) {}
+}
+
+function pickSubject(id, name) {
+  document.getElementById('subject-id').value = id;
+  document.getElementById('subj-name').textContent = '— ' + name;
+  refreshBtn();
+}
+
+async function createSubject() {
+  if (!tok()) { log('Login first.', 'error'); return; }
+  const name = document.getElementById('s-name').value.trim();
+  if (!name) { log('Subject name is required.', 'warn'); return; }
+  try {
+    const { ok, data } = await api('/api/subjects', {
+      method:'POST', headers:{...authH(),'Content-Type':'application/json'},
+      body: JSON.stringify({
+        name,
+        code:       document.getElementById('s-code').value.trim() || null,
+        semester:   document.getElementById('s-sem').value.trim()  || null,
+        department: document.getElementById('s-dept').value.trim() || null,
+        university: document.getElementById('s-univ').value.trim() || null,
+      })
+    });
+    if (ok) { log(`Subject "<b>${data.name}</b>" created (ID: ${data.id})`, 'success'); pickSubject(data.id, data.name); loadSubjects(); }
+    else { log(data.detail || JSON.stringify(data), 'error'); }
+  } catch(e) { log('Server error: ' + e.message, 'error'); }
+}
+
+async function uploadAll() {
+  const sid = document.getElementById('subject-id').value;
+  const yr  = document.getElementById('year').value;
+  const sem = document.getElementById('semester').value;
+  if (!sid || !files.length) return;
+
+  document.getElementById('upload-btn').disabled = true;
+  const bar = document.getElementById('progress-bar');
+  const wrap = document.getElementById('progress-bar-wrap');
+  wrap.style.display = 'block'; bar.style.width = '0%';
+
+  log(`Uploading ${files.length} file(s) to subject ${sid}…`, 'info');
+
+  const fd = new FormData();
+  files.forEach(f => fd.append('files', f));
+  if (yr)  fd.append('year', yr);
+  if (sem) fd.append('semester', sem);
+
+  try {
+    const result = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${BASE}/api/subjects/${sid}/upload-papers`);
+      xhr.setRequestHeader('Authorization', 'Bearer ' + tok());
+      xhr.upload.onprogress = e => { if (e.lengthComputable) bar.style.width = Math.round(e.loaded/e.total*90)+'%'; };
+      xhr.onload  = () => resolve({ status: xhr.status, body: xhr.responseText });
+      xhr.onerror = () => reject(new Error('Network error — is uvicorn running?'));
+      xhr.send(fd);
+    });
+
+    bar.style.width = '100%';
+    const d = JSON.parse(result.body);
+
+    if (result.status === 201) {
+      log(`<b>${d.uploaded.length} paper(s) uploaded.</b> ${d.message}`, 'success');
+      d.uploaded.forEach(p => {
+        const icon = p.status==='processed' ? '✅' : p.status==='failed' ? '❌' : '⏳';
+        log(`${icon} ${p.original_filename} — ${p.status}`, p.status==='failed'?'warn':'info');
+      });
+      if (d.ready_for_analysis) {
+        log(`🎉 ${d.total_papers_for_subject} papers ready! Now go to <a href="http://127.0.0.1:8000/docs#/predictions" target="_blank">Swagger → predictions → POST → Try it out → subject_id=${sid} → Execute</a>`, 'success');
+      } else {
+        log(`Need ${d.min_required - d.total_papers_for_subject} more paper(s) to unlock predictions.`, 'warn');
+      }
+      files = []; renderFiles(); loadSubjects();
+    } else {
+      log('Upload failed (' + result.status + '): ' + (d.detail || result.body), 'error');
+    }
+  } catch(e) {
+    log('Error: ' + e.message, 'error');
+  }
+
+  setTimeout(() => { wrap.style.display='none'; bar.style.width='0%'; }, 1500);
+  refreshBtn();
+}
+
+refreshBtn();
+</script>
+</body>
+</html>
