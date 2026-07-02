@@ -30,3 +30,5 @@ pydantic-settings==2.6.1
 # Dev / testing
 httpx==0.28.1
 pytest==8.3.4
+
+email-validator
